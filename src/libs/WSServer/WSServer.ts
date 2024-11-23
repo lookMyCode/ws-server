@@ -1,4 +1,4 @@
-import WebSocket from 'ws';
+import * as WebSocket from 'ws';
 import { IncomingMessage } from 'http';
 
 import { WSServerConfig } from './WSServerConfig';
@@ -143,6 +143,7 @@ export class WSServer {
 
           const { path, controller: C } = currentRoute;
           const controller = new C({
+            connectGuards: currentRoute.connectGuards || [],
             requestMessagePipes: currentRoute.requestMessagePipes || [],
             responseMessagePipes: currentRoute.responseMessagePipes || [],
             onSocketDestroyCb: () => {

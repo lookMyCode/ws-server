@@ -1,4 +1,4 @@
-import WebSocket from 'ws';
+import * as WebSocket from 'ws';
 import { IncomingMessage } from 'http';
 
 import { ControllerConfig } from "./ControllerConfig";
@@ -148,7 +148,7 @@ export abstract class Controller {
     try {
       const _this = this as any;
       const guards = this.__connectGuards || [];
-
+      
       try {
         let accessDenied = false;
 
