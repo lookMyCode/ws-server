@@ -1,15 +1,19 @@
 import WebSocket from 'ws';
+import { IncomingMessage } from 'http';
 
 import { ControllerConfig } from "./ControllerConfig";
 import { PipeTransform } from '../pipe/PipeTransform';
 import { Params } from '../Params';
 import { QueryParams } from '../QueryParams';
 import { ErrorFilter } from '../filter/ErrorFilter';
+import { CanActivateConnect } from '../guard/CanActivateConnect';
+import { WS_STATUSES } from '../constants/WS_STATUSES';
 
 
 export abstract class Controller {
   private __onSocketDestroyCb = () => {};
   private __webSockets: WebSocket[] = [];
+  private __connectGuards: CanActivateConnect[];
   private __requestMessagePipes: PipeTransform[];
   private __responseMessagePipes: PipeTransform[];
   private __params: Params;
@@ -18,6 +22,7 @@ export abstract class Controller {
 
   constructor(config: ControllerConfig) {
     const { 
+      connectGuards,
       requestMessagePipes, 
       responseMessagePipes, 
       params, 
@@ -27,6 +32,7 @@ export abstract class Controller {
     } = config;
     const _this: any = this;
 
+    this.__connectGuards = connectGuards || [];
     this.__requestMessagePipes = requestMessagePipes || [];
     this.__responseMessagePipes = responseMessagePipes || [];
     this.__params = params;
@@ -56,13 +62,11 @@ export abstract class Controller {
     }
   }
 
-  async __addSocket(ws: WebSocket) {
+  async __addSocket(ws: WebSocket, request: IncomingMessage) {
     try {
-      const _this = this as any;
       this.__webSockets.push(ws);
       await this.__addEventsListeners(ws);
-      
-      if (_this.$onSocketConnect) _this.$onSocketConnect(ws);
+      await this.__onSocketConnect(ws, request);
     } catch (err: unknown) {
       this.__errorFIlter.handleError(err, ws);
     }
@@ -138,6 +142,44 @@ export abstract class Controller {
         this.__errorFIlter.handleError(err);
       }
     });
+  }
+
+  private async __onSocketConnect(ws: WebSocket, request: IncomingMessage) {
+    try {
+      const _this = this as any;
+      const guards = this.__connectGuards || [];
+
+      try {
+        let accessDenied = false;
+
+        for (let i = 0, l = guards.length; i < l; i++) {
+          const guard = guards[i];
+          const canActivate = await guard.canActivate(ws, request);
+
+          if (!canActivate) {
+            accessDenied = true;
+            break;
+          }
+        }
+
+        if (accessDenied) {
+          ws.close(WS_STATUSES.ACCESS_DENIED.code, WS_STATUSES.ACCESS_DENIED.status);
+          return;
+        }
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          ws.close(WS_STATUSES.ACCESS_DENIED.code, err.message); 
+        } else {
+          ws.close(WS_STATUSES.ACCESS_DENIED.code, WS_STATUSES.ACCESS_DENIED.status);
+        }
+
+        return;
+      }
+
+      if (_this.$onSocketConnect) _this.$onSocketConnect(ws);
+    } catch (err: unknown) {
+      this.__errorFIlter.handleError(err, ws);
+    }
   }
 
   private __onSocketError(err: Error, ws: WebSocket) {
