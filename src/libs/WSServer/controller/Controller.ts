@@ -8,6 +8,7 @@ import { QueryParams } from '../QueryParams';
 import { ErrorFilter } from '../filter/ErrorFilter';
 import { CanActivateConnect } from '../guard/CanActivateConnect';
 import { WS_STATUSES } from '../constants/WS_STATUSES';
+import { Notifier, NotifierCallback } from '../Notifier';
 
 
 export abstract class Controller {
@@ -19,6 +20,8 @@ export abstract class Controller {
   private __params: Params;
   private __queryParams: QueryParams;
   private __errorFIlter = new ErrorFilter();
+  private __pathNotifier: Notifier<unknown>;
+  private __currentPath: string;
 
   constructor(config: ControllerConfig) {
     const { 
@@ -29,6 +32,8 @@ export abstract class Controller {
       queryParams, 
       errorFilter, 
       onSocketDestroyCb, 
+      pathNotifier,
+      currentPath,
     } = config;
     const _this: any = this;
 
@@ -37,6 +42,8 @@ export abstract class Controller {
     this.__responseMessagePipes = responseMessagePipes || [];
     this.__params = params;
     this.__queryParams = queryParams;
+    this.__pathNotifier = pathNotifier;
+    this.__currentPath = currentPath;
 
     if (errorFilter) this.__errorFIlter = errorFilter;
     if (onSocketDestroyCb) this.__onSocketDestroyCb = onSocketDestroyCb;
@@ -48,6 +55,17 @@ export abstract class Controller {
         this.__errorFIlter.handleError(err);
       }
     }
+  }
+
+  protected $subscribePathNotifications<T>(cb: NotifierCallback<T>) {
+    return this.__pathNotifier.subscribe(this.__currentPath, cb);
+  }
+
+  protected $notifyPath<T>(path: string, data: T) {
+    let p = path;
+    if (!p.startsWith('/')) p = '/' + p;
+
+    this.__pathNotifier.notify(p, data);
   }
 
   protected $getParams() {
@@ -222,7 +240,12 @@ export abstract class Controller {
   }
 
   private __onSocketDestroy() {
-    if ((this as any).$onSocketDestroy) (this as any).$onSocketDestroy();
+    const t = this as any;
+    if (t.$onSocketDestroy) t.$onSocketDestroy();
+
+    try {
+      this.__pathNotifier.clear(this.__currentPath);
+    } catch (_) {}
     this.__onSocketDestroyCb();
   }
 }

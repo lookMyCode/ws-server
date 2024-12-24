@@ -3,7 +3,15 @@ export const WS_STATUSES = Object.freeze({
     code: 4200,
     status: 'OK',
   },
+  CREATED: {
+    code: 4201,
+    status: 'Created',
+  },
 
+  UNAUTHORIZED: {
+    code: 4401,
+    status: 'Unauthorized',
+  },
   ACCESS_DENIED: {
     code: 4403,
     status: 'Access Denied',

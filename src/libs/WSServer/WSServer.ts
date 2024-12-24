@@ -9,6 +9,7 @@ import { Params } from './Params';
 import { QueryParams } from './QueryParams';
 import { ErrorFilter } from './filter/ErrorFilter';
 import { WS_STATUSES } from './constants/WS_STATUSES';
+import { Notifier } from './Notifier';
 
 
 export class WSServer {
@@ -16,6 +17,7 @@ export class WSServer {
   private connectGuards: CanActivateConnect[] = [];
   private openedControllers: {[path: string]: OpenedController} = {};
   private errorFilter = new ErrorFilter();
+  private pathNotifier = new Notifier<unknown>();
 
   constructor(config: WSServerConfig) {
     let { port, routes, connectGuards, onInit, onConnect, prefixPath, errorFilter } = config;
@@ -151,6 +153,8 @@ export class WSServer {
             },
             params,
             queryParams,
+            pathNotifier: this.pathNotifier,
+            currentPath,
           });
 
           const openedController = {

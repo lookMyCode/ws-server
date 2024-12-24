@@ -3,6 +3,7 @@ import { Params } from '../Params';
 import { QueryParams } from '../QueryParams';
 import { ErrorFilter } from '../filter/ErrorFilter';
 import { CanActivateConnect } from '../guard/CanActivateConnect';
+import { Notifier } from '../Notifier';
 
 
 export interface ControllerConfig {
@@ -13,4 +14,6 @@ export interface ControllerConfig {
   params: Params;
   queryParams: QueryParams;
   errorFilter?: ErrorFilter;
+  pathNotifier: Notifier<unknown>;
+  currentPath: string;
 }
