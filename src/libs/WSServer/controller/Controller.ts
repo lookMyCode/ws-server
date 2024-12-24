@@ -28,7 +28,7 @@ export abstract class Controller {
       params, 
       queryParams, 
       errorFilter, 
-      onSocketDestroyCb 
+      onSocketDestroyCb, 
     } = config;
     const _this: any = this;
 
